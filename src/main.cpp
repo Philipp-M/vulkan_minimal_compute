@@ -575,36 +575,6 @@ public:
         vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, NULL);
     }
 
-    // Read file into array of bytes, and cast to uint32_t*, then return.
-    // The data has been padded, so that it fits into an array uint32_t.
-    uint32_t* readFile(uint32_t& length, const char* filename) {
-
-        FILE* fp = fopen(filename, "rb");
-        if (fp == NULL) {
-            printf("Could not find or open file: %s\n", filename);
-        }
-
-        // get file size.
-        fseek(fp, 0, SEEK_END);
-        long filesize = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-
-        long filesizepadded = long(ceil(filesize / 4.0)) * 4;
-
-        // read file contents.
-        char *str = new char[filesizepadded];
-        fread(str, filesize, sizeof(char), fp);
-        fclose(fp);
-
-        // data padding. 
-        for (int i = filesize; i < filesizepadded; i++) {
-            str[i] = 0;
-        }
-
-        length = filesizepadded;
-        return (uint32_t *)str;
-    }
-
     void createComputePipeline() {
         /*
         We create a compute pipeline here. 
@@ -613,17 +583,15 @@ public:
         /*
         Create a shader module. A shader module basically just encapsulates some shader code.
         */
-        uint32_t filelength;
-        // the code in comp.spv was created by running the command:
-        // glslangValidator.exe -V shader.comp
-        uint32_t* code = readFile(filelength, "shaders/comp.spv");
+        constexpr uint32_t code[] = 
+          #include "shader.comp.spv.h"
+        ;
         VkShaderModuleCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.pCode = code;
-        createInfo.codeSize = filelength;
+        createInfo.codeSize = sizeof(code);
         
         VK_CHECK_RESULT(vkCreateShaderModule(device, &createInfo, NULL, &computeShaderModule));
-        delete[] code;
 
         /*
         Now let us actually create the compute pipeline.
